@@ -50,7 +50,7 @@ app.use('/api', async (req, res) => {
     }
 });
 
-// Media streaming proxy
+// Media streaming proxy (thumbnails, videos, streams)
 app.get('/webapi/*', async (req, res) => {
     try {
         const targetUrl = `https://v2.protogen.fr${req.url}`;
@@ -58,11 +58,20 @@ app.get('/webapi/*', async (req, res) => {
 
         const response = await fetch(targetUrl);
 
-        // Forward headers
+        if (!response.ok) {
+            return res.status(response.status).send('Media not found');
+        }
+
+        // Copy all headers
         response.headers.forEach((value, key) => {
             res.setHeader(key, value);
         });
 
+        // Add CORS headers for media
+        res.setHeader('Access-Control-Allow-Origin', 'https://sebitrollj.github.io');
+        res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+
+        // Stream the response
         response.body.pipe(res);
     } catch (error) {
         console.error('[MEDIA ERROR]', error.message);
