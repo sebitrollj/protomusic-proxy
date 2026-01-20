@@ -50,6 +50,35 @@ app.use('/api', async (req, res) => {
     }
 });
 
+// Assets proxy (thumbnails, images)
+app.get('/assets/*', async (req, res) => {
+    try {
+        const targetUrl = `https://v2.protogen.fr${req.url}`;
+        console.log(`[ASSETS PROXY] ${targetUrl}`);
+
+        const response = await fetch(targetUrl);
+
+        if (!response.ok) {
+            return res.status(response.status).send('Asset not found');
+        }
+
+        // Copy all headers
+        response.headers.forEach((value, key) => {
+            res.setHeader(key, value);
+        });
+
+        // Add CORS headers
+        res.setHeader('Access-Control-Allow-Origin', 'https://sebitrollj.github.io');
+        res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+
+        // Stream the response
+        response.body.pipe(res);
+    } catch (error) {
+        console.error('[ASSETS ERROR]', error.message);
+        res.status(500).send('Assets proxy error');
+    }
+});
+
 // Media streaming proxy (thumbnails, videos, streams)
 app.get('/webapi/*', async (req, res) => {
     try {
@@ -76,6 +105,38 @@ app.get('/webapi/*', async (req, res) => {
     } catch (error) {
         console.error('[MEDIA ERROR]', error.message);
         res.status(500).send('Media proxy error');
+    }
+});
+
+// Kikiskothèque proxy (seasons and episodes)
+app.get('/kikiskothek/*', async (req, res) => {
+    try {
+        const targetUrl = `https://v2.protogen.fr${req.url}`;
+        console.log(`[KIKISKOTHEK PROXY] ${targetUrl}`);
+
+        const response = await fetch(targetUrl);
+
+        if (!response.ok) {
+            return res.status(response.status).json({
+                success: false,
+                error: 'Season data not found'
+            });
+        }
+
+        const data = await response.json();
+
+        // Add CORS headers
+        res.setHeader('Access-Control-Allow-Origin', 'https://sebitrollj.github.io');
+        res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+        res.setHeader('Content-Type', 'application/json');
+
+        res.json(data);
+    } catch (error) {
+        console.error('[KIKISKOTHEK ERROR]', error.message);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
     }
 });
 
